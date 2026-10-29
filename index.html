@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Кая">
+<meta name="theme-color" content="#1a110b">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>html{color-scheme:dark}body{margin:0}[hidden]{display:none!important}</style>
+<title>Кая</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Onest:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-screen video of Kaya, glass UI drawn live on top; bottom chat panel, right icon rail. Single warm-dark look by design. */
+:root{
+  --ink:#f3e7d6; --ink-dim:rgba(243,231,214,.66); --gold:#d9b27a; --gold-soft:rgba(217,178,122,.28);
+  --glass:rgba(34,22,14,.52); --glass-line:rgba(243,231,214,.16); --ground:#1a110b;
+  --display:'Cormorant Garamond',Georgia,serif; --body:'Onest',system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--body);overflow:hidden;margin:0}
+.stage{position:fixed;inset:0;background:var(--ground)}
+.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 20%;transition:opacity .5s}
+.stage::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(20,12,8,.45),transparent 22%,transparent 45%,rgba(20,12,8,.7));pointer-events:none}
+#idle{opacity:0}
+.stage.live #idle{opacity:1}
+.stage.live #intro{opacity:0}
+.ui{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none;
+  padding-top:calc(env(safe-area-inset-top,0px) + 20px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+.ui>*{pointer-events:auto}
+.head{display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}
+.head>*{pointer-events:auto}
+h1{font:600 44px/1 var(--display);margin:0;letter-spacing:.01em}
+h1 i{color:var(--gold);font-style:normal;font-size:.55em;vertical-align:top;margin-left:4px}
+.sub{font-size:10px;letter-spacing:.26em;color:var(--ink-dim);margin-top:8px}
+.rail{display:flex;flex-direction:column;gap:12px}
+.ib{width:48px;height:48px;border-radius:50%;border:1px solid var(--glass-line);background:var(--glass);color:var(--ink);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:grid;place-items:center;cursor:pointer;padding:0}
+.ib svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.panel{border:1px solid var(--glass-line);background:var(--glass);border-radius:26px;padding:10px 14px 14px;
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;flex-direction:column;gap:12px;max-height:58%}
+.grab{width:38px;height:4px;border-radius:2px;background:var(--glass-line);align-self:center}
+.log{overflow-y:auto;display:flex;flex-direction:column;gap:12px;min-height:0}
+.msg{display:flex;gap:10px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;flex:none;background:#2a1a10 url(kaya-avatar.jpg) 50% 30%/cover;border:1px solid var(--gold-soft);cursor:pointer;
+  display:grid;place-items:center;font:600 20px var(--display);color:var(--gold)}
+.bub{font-size:14px;line-height:1.45;min-width:0}
+.bub b{display:block;font:600 19px/1.2 var(--display);margin-bottom:2px}
+.me{justify-content:flex-end}
+.me .bub{background:var(--gold-soft);padding:8px 12px;border-radius:16px 16px 4px 16px;max-width:82%}
+.plan{margin-top:8px;border:1px solid var(--glass-line);border-radius:14px;padding:10px 12px;display:grid;gap:6px;font-size:13px}
+.plan div{display:flex;gap:10px}.plan time{color:var(--gold);width:44px;flex:none;font-variant-numeric:tabular-nums}
+.plan button{justify-self:start;margin-top:4px}
+.pill{border:1px solid var(--glass-line);background:rgba(255,255,255,.06);color:var(--ink);border-radius:999px;padding:7px 12px;font:400 13px var(--body);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.pill svg{width:15px;height:15px;stroke:var(--gold);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.chips .pill{flex:none}
+form{display:flex;gap:8px;align-items:center}
+.field{flex:1;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--glass-line);background:rgba(0,0,0,.25);border-radius:999px;padding:0 6px}
+.field input{flex:1;min-width:0;background:none;border:0;color:var(--ink);font:400 15px var(--body);padding:12px 4px}
+.field input::placeholder{color:var(--ink-dim)}
+.tiny{width:34px;height:34px;border:0;background:none;color:var(--ink-dim);cursor:pointer;display:grid;place-items:center;border-radius:50%;padding:0}
+.tiny svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.tiny.rec{color:var(--gold);background:var(--gold-soft)}
+.send{width:46px;height:46px;border-radius:50%;border:0;background:var(--gold);color:#2a1a10;display:grid;place-items:center;cursor:pointer;flex:none;padding:0}
+.send svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sheet{position:fixed;inset:0;background:rgba(10,6,3,.6);display:flex;align-items:flex-end;z-index:8}
+.sheet>div{width:100%;box-sizing:border-box;background:#241710;border-top:1px solid var(--glass-line);border-radius:26px 26px 0 0;max-height:80%;overflow-y:auto;
+  padding:20px max(16px,env(safe-area-inset-left,0px)) calc(env(safe-area-inset-bottom,0px) + 20px)}
+.sheet h2{font:600 28px var(--display);margin:0 0 4px}
+.sheet p{color:var(--ink-dim);font-size:14px;line-height:1.5;margin:0 0 12px}
+.list{display:grid;gap:8px}
+.list button{text-align:left;border:1px solid var(--glass-line);background:rgba(255,255,255,.05);color:var(--ink);border-radius:16px;padding:12px 14px;font:400 15px var(--body);cursor:pointer}
+.list small{display:block;color:var(--ink-dim);font-size:12px;margin-top:2px}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 16px);transform:translateX(-50%);background:#241710;border:1px solid var(--gold-soft);padding:10px 16px;border-radius:999px;font-size:13px;z-index:9;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion:reduce){.stage video{transition:none}}
+
+/* chat screen: brushed-metal frame, grey paper, mono type (from чат.png) */
+.chat{position:fixed;inset:0;z-index:4;display:flex;flex-direction:column;gap:6px;box-sizing:border-box;font-family:'IBM Plex Mono',ui-monospace,monospace;color:#2b2b2b;
+  background:linear-gradient(160deg,#8d8f90,#c9cacb 30%,#7b7d7f 60%,#b5b6b7);
+  padding-top:calc(env(safe-area-inset-top,0px) + 14px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 14px);
+  padding-left:max(14px,env(safe-area-inset-left,0px),calc((100% - 430px)/2));padding-right:max(14px,env(safe-area-inset-right,0px),calc((100% - 430px)/2))}
+.chat[hidden]{display:none}
+.bev{border-radius:10px;border:2px solid #5d5f61;box-shadow:inset 0 0 0 2px #d9dadb,inset 0 0 0 3px #7a7c7e,0 1px 2px rgba(0,0,0,.4)}
+.top{display:grid;grid-template-columns:38% minmax(0,1fr);gap:6px;align-items:stretch}
+@media (max-width:460px){.mini{display:none}.online{padding:6px 8px;gap:6px;letter-spacing:.06em}.card h2{margin-top:22px}.win{gap:8px}.spark{right:14px;top:auto;bottom:12px}}
+.chat,.chat *{min-width:0}
+.chat{overflow-x:hidden}
+.portrait{background:#222;padding:0;overflow:hidden;aspect-ratio:580/540}
+.portrait img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 40%}
+.card{background:linear-gradient(180deg,#222325,#141415);color:#eee;position:relative;padding:12px 14px;overflow:hidden;min-width:0}
+.card h2{font:500 clamp(34px,10vw,52px)/1 'IBM Plex Mono',monospace;margin:18px 0 0;letter-spacing:.02em;color:#efe9df}
+.card .role{font-size:clamp(10px,2.9vw,13px);letter-spacing:.2em;color:#cfc8bc;margin-top:6px}
+.online{margin-top:14px;display:inline-flex;gap:10px;align-items:center;border:1px solid #555;border-radius:10px;padding:7px 10px;font-size:clamp(10px,3vw,13px);letter-spacing:.12em;color:#ddd}
+.online i{width:10px;height:10px;border-radius:50%;background:#8fcf9f}
+.online u{text-decoration:none;opacity:.5}
+.win{position:absolute;top:8px;right:10px;display:flex;gap:14px}
+.win button{background:none;border:0;color:#ccc;font:400 18px/1 monospace;cursor:pointer;padding:4px}
+.mini{position:absolute;right:10px;bottom:14px;display:grid;gap:5px;font-size:9px;letter-spacing:.14em;color:#8e8e8e;text-align:left}
+.spark{position:absolute;right:56px;top:46px;color:#d9b27a;font-size:22px;letter-spacing:6px}
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.tabs button{flex:1 0 auto;background:linear-gradient(#cfcfcf,#9c9e9f);border:1px solid #606264;border-radius:6px;color:#2b2b2b;font:400 12px 'IBM Plex Mono',monospace;letter-spacing:.1em;padding:11px 12px;cursor:pointer;white-space:nowrap}
+.tabs button.on{background:linear-gradient(#f0efe9,#d6d4cb);font-weight:500}
+.paper{flex:1;min-height:0;overflow-y:auto;padding:14px 12px 10px;background:radial-gradient(circle at 30% 20%,#dcd9d0,#c8c5bb);display:flex;flex-direction:column;gap:12px}
+.sep{display:flex;align-items:center;gap:12px;font-size:11px;letter-spacing:.14em;color:#444;margin:2px 0 6px}
+.sep:before,.sep:after{content:"";flex:1;height:1px;background:#555}
+.who{font-size:11px;letter-spacing:.1em;color:#444;margin-bottom:4px}
+.row.me .who{text-align:right}
+.row{display:flex;flex-direction:column}
+.cb{max-width:84%;box-sizing:border-box;padding:12px 14px 22px;border-radius:12px;position:relative;font-size:clamp(13px,3.9vw,16px);line-height:1.45;border:1px solid;white-space:pre-wrap;overflow-wrap:anywhere}
+.row.k .cb{background:#a9bcc3;border-color:#7d9199;align-self:flex-start}
+.row.me .cb{background:#e9dcc7;border-color:#b9a98f;align-self:flex-end}
+.cb time{position:absolute;right:12px;bottom:5px;font-size:10px;color:#555;letter-spacing:.06em}
+.cl{margin-top:10px;background:#d6d3c8;border-radius:10px;border:1px solid #9aa6aa;padding:8px 10px;display:grid;gap:8px;white-space:normal}
+.cl label{display:flex;gap:12px;align-items:center;font-size:clamp(12px,3.5vw,14px);cursor:pointer}
+.cl label span{flex:1;min-width:0}.cl label em{font-style:normal;color:#444;font-variant-numeric:tabular-nums}
+.cl input{appearance:none;width:18px;height:18px;border:1.5px solid #333;border-radius:2px;background:none;margin:0;flex:none}
+.cl input:checked{background:#333 radial-gradient(circle,#d6d3c8 0 0)}
+.cl input:checked+span{text-decoration:line-through;opacity:.6}
+.cl button{justify-self:start;font:400 12px 'IBM Plex Mono',monospace;border:1px solid #555;background:#e9e6dc;border-radius:6px;padding:7px 10px;cursor:pointer;letter-spacing:.08em}
+.bar{display:flex;gap:6px;align-items:center;padding:6px;background:linear-gradient(#bdbebf,#8f9193)}
+.bar .bt{width:46px;height:46px;flex:none;border:1px solid #4d4f51;border-radius:6px;background:linear-gradient(#e6e7e8,#a9abad);font:400 24px monospace;color:#222;cursor:pointer;padding:0;display:grid;place-items:center}
+.bar .bt svg{width:22px;height:22px;stroke:#222;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bar .fl{flex:1;min-width:0;display:flex;align-items:center;background:#d8d6cd;border:1px solid #6a6c6e;border-radius:6px;box-shadow:inset 0 1px 3px rgba(0,0,0,.3)}
+.bar input{flex:1;min-width:0;background:none;border:0;font:400 16px 'IBM Plex Mono',monospace;padding:13px 10px;color:#222}
+.bar input::placeholder{color:#777}
+.nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.nav button{border:1px solid #5d5f61;border-radius:6px;background:linear-gradient(#cfd0d1,#8f9193);color:#222;font:400 clamp(8px,2.3vw,11px) 'IBM Plex Mono',monospace;letter-spacing:.06em;padding:10px 2px 9px;cursor:pointer;display:grid;gap:5px;place-items:center}
+.nav svg{width:24px;height:24px;stroke:#222;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.chat button:focus-visible,.chat input:focus-visible{outline:2px solid #1f4f8f;outline-offset:2px}
+
+/* sections: separate screens, not inside the chat */
+.sec{position:fixed;inset:0;z-index:7;background:radial-gradient(120% 80% at 50% 0%,#3a2619,#1a110b 70%);overflow-y:auto;color:var(--ink);
+  padding-top:calc(env(safe-area-inset-top,0px) + 16px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.sec[hidden],.sheet[hidden],.toast[hidden],.chat[hidden]{display:none!important}
+.sec .col{max-width:520px;margin:0 auto;display:grid;gap:14px}
+.sec header{display:flex;align-items:center;gap:12px}
+.sec h2{font:600 34px/1 var(--display);margin:0}
+.sec .back{border:1px solid var(--glass-line);background:var(--glass);color:var(--ink);border-radius:999px;padding:9px 14px;font:400 13px var(--body);cursor:pointer}
+.sec .lead{color:var(--ink-dim);font-size:14px;line-height:1.5;margin:0}
+.sec .tabs2{display:flex;gap:8px}
+.sec .tabs2 button{flex:1;border:1px solid var(--glass-line);background:rgba(255,255,255,.05);color:var(--ink-dim);border-radius:999px;padding:10px;font:400 14px var(--body);cursor:pointer}
+.sec .tabs2 button.on{background:var(--gold-soft);color:var(--ink);border-color:var(--gold)}
+.tile{border:1px solid var(--glass-line);background:var(--glass);border-radius:20px;padding:16px;display:grid;gap:8px;text-align:left;color:var(--ink);font:inherit}
+button.tile{cursor:pointer;width:100%}
+.tile h3{font:600 22px/1.15 var(--display);margin:0}
+.tile p{margin:0;color:var(--ink-dim);font-size:13.5px;line-height:1.5}
+.tile .empty{color:var(--ink-dim);font-size:13px;font-style:italic}
+.tile .btns{display:flex;gap:8px;flex-wrap:wrap}
+.tile .btns button,.tile .go{border:1px solid var(--gold);background:var(--gold-soft);color:var(--ink);border-radius:999px;padding:9px 14px;font:400 13px var(--body);cursor:pointer}
+.tile.big{background:linear-gradient(135deg,rgba(217,178,122,.22),rgba(34,22,14,.6));border-color:var(--gold)}
+.tile input{background:rgba(0,0,0,.28);border:1px solid var(--glass-line);border-radius:12px;color:var(--ink);font:400 15px var(--body);padding:11px 12px;min-width:0;width:100%;box-sizing:border-box}
+.tile ul{margin:0;padding-left:18px;color:var(--ink);font-size:14px;line-height:1.7}
+.tchips{display:flex;gap:6px;flex-wrap:wrap}
+.tchips span{border:1px solid var(--glass-line);border-radius:999px;padding:5px 10px;font-size:12px;color:var(--ink-dim)}
+.sec button:focus-visible,.sec input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.cb .act{display:inline-block;margin-top:10px;border:1px solid #555;background:#e9e6dc;border-radius:6px;padding:8px 12px;color:#222;text-decoration:none;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <video id="idle" src="kaya-idle.mp4" muted loop playsinline preload="auto"></video>
+  <video id="intro" src="kaya-intro.mp4" muted playsinline preload="auto" autoplay></video>
+</div>
+
+<div class="ui">
+  <div class="head">
+    <div><h1>Кая<i>✦</i></h1></div>
+    <div class="rail">
+      <button class="ib" data-open="sections" aria-label="Разделы"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></button>
+      <button class="ib" data-sheet="week" aria-label="Календарь"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></button>
+      <button class="ib" data-sheet="stats" aria-label="Статистика"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg></button>
+      <button class="ib" data-sheet="tasks" aria-label="Задачи"><svg viewBox="0 0 24 24"><path d="M5 7l2 2 3-3M13 8h6M5 16l2 2 3-3M13 17h6"/></svg></button>
+      <button class="ib" data-sheet="settings" aria-label="Настройки"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg></button>
+    </div>
+  </div>
+
+  <section class="panel" aria-label="Чат с Каей">
+    <div class="grab"></div>
+    <div class="log" id="log" aria-live="polite">
+      <div class="msg"><button class="av" data-open="sections" aria-label="Разделы">К</button>
+        <div class="bub" id="greet"><b></b><span></span></div></div>
+    </div>
+    <div class="chips">
+      <button class="pill" data-q="Сегодня"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>Сегодня</button>
+      <button class="pill" data-q="Неделя"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16"/></svg>Неделя</button>
+      <button class="pill" data-q="Пятница"><svg viewBox="0 0 24 24"><path d="M7 4h10l-1 7a4 4 0 0 1-8 0zM12 15v5M9 20h6"/></svg>Пятница</button>
+      <button class="pill" data-q="Нет сил"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="16" height="9" rx="2"/><path d="M21 11v3M7 11v3"/></svg>Нет сил</button>
+    </div>
+    <form id="form">
+      <div class="field">
+        <button type="button" class="tiny" aria-label="Добавить"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+        <input id="msg" autocomplete="off" placeholder="Напиши Кае…" aria-label="Сообщение">
+        <button type="button" class="tiny" id="mic" aria-label="Голос"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+      </div>
+      <button class="send" aria-label="Отправить"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+    </form>
+  </section>
+</div>
+
+
+<div class="chat" id="chat" hidden>
+  <div class="top">
+    <div class="portrait bev"><img src="kaya-avatar.jpg" alt="Кая"></div>
+    <div class="card bev">
+      <div class="win"><button aria-label="Свернуть">&minus;</button><button aria-label="Развернуть">&#9633;</button><button id="closeChat" aria-label="Закрыть чат">&times;</button></div>
+      <div class="spark" aria-hidden="true">✦ ✧</div>
+      <h2>Кая</h2><div class="role">АССИСТЕНТКА</div>
+      <div class="online"><i></i>ONLINE <u>|</u> <span id="clock">11:26</span></div>
+      <div class="mini" aria-hidden="true"><span>PLAN</span><span>FOCUS</span><span>BALANCE</span><span>PROGRESS</span></div>
+    </div>
+  </div>
+  <div class="tabs bev" style="padding:4px;border-radius:8px">
+    <button id="backBtn" aria-label="Назад на главный экран">&#8592; ГЛАВНАЯ</button><button class="on">ЛИЧНЫЙ ЧАТ</button><button data-sheet="tasks">+ ЗАДАЧИ</button><button data-sheet="week">КАЛЕНДАРЬ</button><button data-sheet="files">ФАЙЛЫ</button>
+  </div>
+  <div class="paper bev" id="paper" aria-live="polite"></div>
+  <form class="bar bev" id="cform">
+    <button type="button" class="bt" aria-label="Добавить">+</button>
+    <div class="fl"><input id="cmsg" autocomplete="off" placeholder="Напиши Кае…" aria-label="Сообщение"></div>
+    <button class="bt" aria-label="Отправить"><svg viewBox="0 0 24 24"><path d="M12 20V5M5 12l7-7 7 7"/></svg></button>
+  </form>
+  <nav class="nav">
+    <button data-sheet="tasks"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12l3 3 5-6"/></svg>ЗАДАЧИ</button>
+    <button data-sheet="week"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>КАЛЕНДАРЬ</button>
+    <button data-sheet="train"><svg viewBox="0 0 24 24"><path d="M3 9v6M6 7v10M18 7v10M21 9v6M6 12h12"/></svg>ТРЕНИРОВКИ</button>
+    <button data-sheet="food"><svg viewBox="0 0 24 24"><path d="M4 12h16a8 8 0 0 1-16 0zM9 8c0-2 3-2 3-4M14 8c0-2 3-2 3-4"/></svg>ПИТАНИЕ</button>
+    <button data-sheet="settings"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>ЕЩЁ</button>
+  </nav>
+</div>
+<div class="sec" id="sec" hidden><div class="col" id="secCol"></div></div>
+<div class="sheet" id="sheet" hidden><div id="sheetBody"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const stage=$('#stage'),intro=$('#intro'),idle=$('#idle');
+
+/* video: intro once, then idle loops; paused while another section is open */
+let startedIdle=false;
+function goIdle(){ if(startedIdle) return; startedIdle=true; idle.play().catch(()=>{}); stage.classList.add('live'); }
+intro.addEventListener('ended',goIdle);
+intro.addEventListener('error',goIdle);
+intro.play().catch(()=>{ /* autoplay refused: show idle straight away */ goIdle(); });
+idle.play().then(()=>idle.pause()).catch(()=>{});
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ (startedIdle?idle:intro).play().catch(()=>{}); }});
+
+/* reactions: Kaya ends a reply with [react: x]; strip it, hand it to the clip player */
+const TAG=/\n?\[react:\s*(\w+)\]\s*$/;
+function parseReply(t){ const m=t.match(TAG); return {text:t.replace(TAG,'').trim(), react:m?m[1]:null}; }
+function playReaction(name){ /* clips not made yet */ console.log('react',name); }
+
+/* placeholder brain until the server is connected */
+function plan(items){return {items}}
+function rawReply(q){
+  const s=q.toLowerCase();
+  if(/не смогла поспать|не спала|не могу уснуть|бессонн|во сколько.*(встать|проснуться)/.test(s)) return {t:'Поняла. Вставай как обычно, в 6:30: если уснёшь к 5:00, это ровно один цикл сна, проснёшься легче. Телефон убери, свет приглуши. Тренировку сегодня облегчим, остальное я подстрою.\n[react: soft]'};
+  if(/будильник|разбуди|подними меня/.test(s)){const m=s.match(/(\d{1,2})[:.](\d{2})/)||s.match(/в\s+(\d{1,2})()/);
+    if(m){const hh=String(m[1]).padStart(2,'0'),mm=m[2]||'00',tm=hh+':'+mm;
+      return {t:'Будильник на '+tm+'. Нажми, чтобы он встал в часы.',act:{label:'Поставить на '+tm,href:'shortcuts://run-shortcut?name='+encodeURIComponent('Кая будильник')+'&input=text&text='+encodeURIComponent(((+hh*60+ +mm)>(new Date().getHours()*60+new Date().getMinutes())?'сегодня':'завтра')+' в '+(+hh)+':'+mm)}};}
+    return {t:'На какое время? Напиши, например: будильник на 6:30.'};}
+  if(/накрыло/.test(s)) return {t:'Я здесь. Что случилось? Напиши одним предложением.\n[react: soft]'};
+  if(/нет сил/.test(s)) return {t:'Поняла. Сегодня одно дело, остальное я перенесла.\n[react: soft]'};
+  if(/отмен|перенес|не успе/.test(s)) return {t:'Отменила. Завтра в то же время.\n[react: eyeroll]'};
+  if(/запиши|поставь|напомни|добавь/.test(s)) return {t:'Записала. Без опозданий.\n[react: nod]'};
+  if(/погод|дожд|холодно|тепло|зонт/.test(s)) return {t:(window.__weather||'Погоду сейчас не вижу. Загляни в окно, я пока подожду.')};
+  if(/^\s*сегодня\s*$/.test(s)) return {t:'Расписание на сегодня. Безупречное, при условии, что ты не опоздаешь.',plan:[['06:30','Подъём'],['08:00','Работа'],['18:30','Тренировка'],['20:00','Турецкий, 20 минут']]};
+  if(/^\s*неделя\s*$/.test(s)) return {t:'Капсула на неделю. Скажи, что убрать.',plan:[['Пн','Тренировка, турецкий'],['Ср','Английский'],['Пт','Разбор недели']]};
+  if(/^\s*пятница\s*$/.test(s)) return {t:'В пятницу разбор недели после работы. Всё, как договаривались.'};
+  return null;
+}
+function ics(items){
+  const d=new Date(),p=n=>String(n).padStart(2,'0'),day=''+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate());
+  return 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Kaya//RU\r\n'+items.filter(i=>/^\d\d:\d\d$/.test(i[0])).map((i,k)=>{
+    const t=i[0].replace(':','')+'00';
+    return 'BEGIN:VEVENT\r\nUID:kaya-'+day+'-'+k+'@kaya\r\nDTSTAMP:'+day+'T000000\r\nDTSTART:'+day+'T'+t+'\r\nSUMMARY:'+i[1]+'\r\nEND:VEVENT\r\n';}).join('')+'END:VCALENDAR';
+}
+
+
+/* greeting: Kaya's lines by time of day, a different one each launch (will be written by the model once the server is connected) */
+const GREET={
+ morning:[['Доброе утро. Безупречное начало.','Что у нас в расписании показа?'],['Утро. Кофе уже был?','Тогда начнём с главного.'],['Ты рано. Подозрительно.','Рассказывай, что на сегодня.']],
+ day:[['Привет. Я как раз освободилась.','Что планируем?'],['Ты вовремя. Для разнообразия.','С чего начнём?'],['Слушаю. Образ дня ещё не собран.','Что у тебя происходит?']],
+ evening:[['Добрый вечер. День почти в коллекции.','Что осталось?'],['Вечер. Покажи, что успела.','Остальное разберём.'],['Привет. Закрываем день красиво.','С чего начнём?']],
+ night:[['Поздно. Даже мне пора выключить свет.','Что-то срочное?'],['Ночью планы не пишут.','Но я слушаю.'],['Ты не спишь. Любопытно.','Рассказывай коротко.']]
+};
+(function(){const h=new Date().getHours(),k=h<5?'night':h<12?'morning':h<18?'day':h<23?'evening':'night';
+ const a=GREET[k],g=a[Math.floor(Math.random()*a.length)],e=$('#greet');e.querySelector('b').textContent=g[0];e.querySelector('span').textContent=g[1];window.__greet=g;})();
+
+/* weather: Nizhny Novgorod via Open-Meteo, phrased in Kaya's voice. Needs a normal host (the preview page blocks outside requests); fails silently. */
+const NN={lat:56.33,lon:44.0};
+const W_PH={
+ thunder:['Гроза. Сидим дома, образ не страдает.','Гроза за окном. Эффектно, но без нас.'],
+ rain:['Дождь. Зонт сегодня часть образа.','Дождь. Обувь на каблуке оставь на потом.'],
+ snow:['Снег. Красиво, пока не выходишь.','Снег. Шарф не обсуждается.'],
+ fog:['Туман. Видимость как у моих планов на твой день: отличная вблизи.','Туман. Выходи заранее.'],
+ clear:['Ясно. Погода на высоте, не подведи.','Солнечно. Редкий случай, воспользуйся.'],
+ cloud:['Облачно. Нейтрально, как хороший бежевый.','Пасмурно. Идеально для работы.']
+};
+const T_PH={cold:['Мороз. Одевайся как на обложку, но тёплую.'],chill:['Холодно. Верхний слой обязателен.'],mild:['Прохладно. Куртка не помешает.'],warm:['Тепло. Можно легче.'],hot:['Жара. Пей воду, остальное я организую.']};
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function weatherLine(w){
+  const c=w.code,t=Math.round(w.temp);
+  const k=c>=95?'thunder':(c>=51&&c<=67)||(c>=80&&c<=82)?'rain':(c>=71&&c<=77)||c===85||c===86?'snow':c===45||c===48?'fog':c<=1?'clear':'cloud';
+  const tk=t<=-10?'cold':t<=0?'chill':t<=12?'mild':t<=28?'warm':'hot';
+  const sign=t>0?'+'+t:''+t;
+  return 'В Нижнем '+sign+'°. '+pick(W_PH[k])+(k==='clear'||k==='cloud'?' '+pick(T_PH[tk]):'');
+}
+async function getWeather(){
+  try{
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+NN.lat+'&longitude='+NN.lon+'&current=temperature_2m,weather_code&timezone=Europe%2FMoscow');
+    if(!r.ok)return null;const j=await r.json();
+    return {temp:j.current.temperature_2m,code:j.current.weather_code};
+  }catch(e){return null;}
+}
+getWeather().then(w=>{ if(!w)return; window.__weather=weatherLine(w);
+  const g=$('#greet'),l=document.createElement('div');l.style.cssText='margin-top:6px;color:var(--gold);font-size:13px';l.textContent=window.__weather;g.append(l); });
+const paper=$('#paper');
+const hhmm=()=>{const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
+let chatReady=false;
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+let HIST=LS.get('kaya.chat.v1',[]);
+const dayKey=d=>d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+function sep(label){const sp=document.createElement('div');sp.className='sep';sp.textContent=label;paper.append(sp);}
+function render(who,text,pl,time,act){
+  const row=document.createElement('div');row.className='row '+(who==='me'?'me':'k');
+  const w=document.createElement('div');w.className='who';w.textContent=(who==='me'?'ТЫ':'КАЯ')+' // '+time;
+  const b=document.createElement('div');b.className='cb';b.append(document.createTextNode(text));
+  if(pl){const c=document.createElement('div');c.className='cl';
+    pl.forEach(i=>{const l=document.createElement('label');const k=document.createElement('input');k.type='checkbox';const s=document.createElement('span');s.textContent=i[1];const e=document.createElement('em');e.textContent=i[0];l.append(k,s,e);c.append(l);});
+    const bt=document.createElement('button');bt.type='button';bt.textContent='В КАЛЕНДАРЬ';bt.onclick=()=>{try{const a=document.createElement('a');a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics(pl));a.download='kaya.ics';document.body.append(a);a.click();a.remove();toast('Открываю Календарь. Если ничего не произошло, откроешь страницу из Safari.');}catch(e){toast('Не получилось. Попробуй из Safari.');}};
+    c.append(bt);b.append(c);}
+  if(act){const a=document.createElement('a');a.className='act';a.href=act.href;a.textContent=act.label;b.append(a);
+    const cp=document.createElement('button');cp.type='button';cp.className='act';cp.textContent='Скопировать ссылку';cp.style.marginLeft='6px';cp.style.cursor='pointer';
+    cp.onclick=async()=>{try{await navigator.clipboard.writeText(act.href);toast('Ссылка скопирована. Вставь её в адресную строку Safari.');}catch(e){const i=document.createElement('input');i.readOnly=true;i.value=act.href;i.style.cssText='display:block;width:100%;margin-top:8px;font:12px monospace;box-sizing:border-box';b.append(i);i.focus();i.select();toast('Выдели и скопируй ссылку вручную.');}};
+    b.append(cp);}
+  const t=document.createElement('time');t.textContent=time;b.append(t);
+  row.append(w,b);paper.append(row);paper.scrollTop=paper.scrollHeight;
+}
+function cadd(who,text,pl,act){
+  const now=new Date(),k=dayKey(now),time=hhmm();
+  const last=HIST.length?HIST[HIST.length-1].d:null;
+  if(last!==k)sep('СЕГОДНЯ • '+time);
+  HIST.push({who,text,pl:pl||null,act:act||null,time,d:k});
+  if(HIST.length>500)HIST=HIST.slice(-500);
+  LS.set('kaya.chat.v1',HIST);
+  render(who,text,pl,time,act);
+}
+function restore(){
+  let prev=null;const today=dayKey(new Date());
+  HIST.forEach(m=>{if(m.d!==prev){const p=m.d.split('-');sep(m.d===today?'СЕГОДНЯ':p[2].padStart(2,'0')+'.'+p[1].padStart(2,'0'));prev=m.d;}render(m.who,m.text,m.pl,m.time,m.act);});
+}
+function openChat(){
+  if(!chatReady){chatReady=true;restore();
+    const last=HIST.length?HIST[HIST.length-1].d:null;
+    if(last!==dayKey(new Date())){const g=window.__greet||['Привет.','Что планируем?'];cadd('k',g[0]+'\n'+g[1]);}}
+  $('#chat').hidden=false;idle.pause();paper.scrollTop=paper.scrollHeight;
+}
+function closeChat(){$('#chat').hidden=true;idle.play().catch(()=>{});}
+$('#closeChat').onclick=closeChat;$('#backBtn').onclick=closeChat;
+setInterval(()=>{$('#clock').textContent=hhmm();},20000);$('#clock').textContent=hhmm();
+const PERSONA=`Ты Кая, личная ассистент-секретарша Алёны, её планировщик и помощница. Тон как у героини «Дьявол носит Prada»: холодновато-элегантный, сухой, с тонкой иронией, спокойно, без восклицательных знаков и смайликов. Констатируешь, а не просишь. Подкалываешь ровным голосом, но никогда не бьёшь по больному: страх, усталость, внешность, провалы. Когда Алёне тяжело, говоришь короче и теплее, без иронии и гламура. Гламур совсем чуть-чуть: не больше одного глянцевого слова или образа в сообщении и не в каждом (безупречно, шик, на высоте, образ дня, капсула, коллекция, вне конкуренции). Не восторгаешься, не сюсюкаешь, не читаешь нотации, не давишь виной, не сыплешь советами без просьбы.
+Обращаешься на «ты», по имени, редко и без сиропа ласково. Длина: две-пять фраз; длиннее только если просят историю или разбор. Отвечай сразу по сути на любой вопрос, без фраз вроде «поняла, расскажи подробнее». Если вопрос ответом не требует деталей, просто ответь. Если Алёна говорит «нет сил», предложи минимум на день (одно-два дела).
+Про психологию: помогаешь её приёмами, но не заменяешь психолога; если совсем тяжело, мягко напомни, к кому можно обратиться.
+Контекст: Алёна живёт в Нижнем Новгороде, работает на складе (график 8:00-17:00, в пятницу до 16:00), подъём в 6:30, почти каждый день тренируется, учит турецкий с нуля и английский, хочет со временем уйти со склада, возможно в маркетинг. Расписание за неё не выдумывай: если не знаешь, спроси или скажи, что запишешь, когда она назовёт.
+В самом конце ответа, на отдельной строке, можешь поставить одну скрытую метку реакции [react: eyeroll|nod|brow|smirk|soft|listen|idle]: eyeroll на лёгкую отмену или перенос, nod на «запиши/поставь/напомни», brow на то, что она передумала, smirk когда она что-то выполнила, soft когда ей тяжело. Не на каждое сообщение; если не уверена, метки нет. В тяжёлые моменты только soft. Метку никогда не упоминай в тексте.`;
+let thinking=false;
+async function askModel(q){
+  if(thinking)return;thinking=true;
+  const typ=document.createElement('div');typ.className='row k';const tw=document.createElement('div');tw.className='who';tw.textContent='КАЯ // …';const tb=document.createElement('div');tb.className='cb';tb.textContent='печатает…';typ.append(tw,tb);paper.append(typ);paper.scrollTop=paper.scrollHeight;
+  let out=null,err=null;
+  try{
+    const sample=await claude.use('sample');
+    if(!sample)throw {code:'none'};
+    const hist=HIST.slice(-14).map(m=>(m.who==='me'?'Алёна: ':'Кая: ')+m.text).join('\n');
+    const now=new Date().toLocaleString('ru-RU',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+    const prompt=PERSONA+'\n\nСейчас: '+now+'.'+(window.__weather?' Погода: '+window.__weather:'')+'\n\nПереписка (последние сообщения):\n'+hist+'\n\nОтветь на последнее сообщение Алёны как Кая. Только текст ответа и, если уместно, метка реакции в конце.';
+    const res=await sample(prompt,{cache:false,modelTier:'quick'});
+    out=res&&res.text;
+  }catch(e){err=e;}
+  typ.remove();thinking=false;
+  if(out){const p=parseReply(out);cadd('k',p.text);if(p.react)playReaction(p.react);}
+  else{const c=err&&err.code;cadd('k',c==='not_granted'?'Мне нужно твоё разрешение думать. Нажми «Разрешить» в окне, потом повтори вопрос.':c==='rate_limited'?'Слишком часто. Дай мне минуту.':'Связь пропала. Повтори вопрос чуть позже.');}
+}
+function ask(q){
+  if(!q.trim())return;openChat();cadd('me',q);
+  setTimeout(()=>{const r=rawReply(q);
+    if(!r){askModel(q);return;}
+    const p=parseReply(r.t);cadd('k',p.text,r.plan,r.act);if(p.react)playReaction(p.react);},500);
+}
+$('#form').onsubmit=e=>{e.preventDefault();const i=$('#msg');ask(i.value);i.value='';};
+$('#cform').onsubmit=e=>{e.preventDefault();const i=$('#cmsg');ask(i.value);i.value='';};
+document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>ask(b.dataset.q));
+
+
+/* sections */
+function h(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+function tile(title,text,opts){opts=opts||{};const t=h(opts.tag||'div','tile'+(opts.big?' big':''));if(title)t.append(h('h3',null,title));if(text)t.append(h('p',null,text));return t;}
+function empty(t,msg){t.append(h('div','empty',msg));return t;}
+function btns(t,list){const b=h('div','btns');list.forEach(([l,f])=>{const x=h('button',null,l);x.type='button';x.onclick=f;b.append(x);});t.append(b);return t;}
+function say(q){closeSec();ask(q);}
+function addList(key,title,ph,btn,msg){
+  const t=tile(title);const items=LS.get(key,[]);
+  if(items.length){const u=h('ul');items.forEach(i=>u.append(h('li',null,i)));t.append(u);}
+  const inp=h('input');inp.placeholder=ph;inp.setAttribute('aria-label',ph);t.append(inp);
+  const go=h('button','go',btn);go.type='button';go.onclick=()=>{const v=inp.value.trim();if(!v)return;const a=LS.get(key,[]);a.push(v);LS.set(key,a);toast(msg);renderSection(CUR.id,CUR.tab);};t.append(go);
+  return t;
+}
+const SEC={
+ support:{title:'Опора',lead:'Когда страшно. Здесь я только рядом.',build(c){
+   const t=tile('Накрыло','Нажми, и я спрошу, что случилось.',{big:true,tag:'button'});t.type='button';t.onclick=()=>say('Накрыло');c.append(t);
+   c.append(empty(tile('Мои техники'),'Пока пусто. Расскажи, что тебе помогает, и я запишу.'));
+   c.append(empty(tile('Мои фразы'),'Пока пусто. Скажи, какие слова тебя держат.'));
+   c.append(empty(tile('Кто может помочь'),'Пока пусто. Назови людей, которым можно написать.'));}},
+ stories:{title:'Истории',lead:'Присылаешь вещь, вечером в 20:00 я рассказываю, откуда она.',build(c){
+   c.append(addList('kaya.stories.queue.v1','Что рассказать','Например: серьги с жемчугом','Отправить Кае','Записала. Вечером расскажу.'));
+   const col=tile('Коллекция');empty(col,'Пока пусто. Первая история придёт сегодня в 20:00.');
+   const ch=h('div','tchips');['Мода','Украшения','Еда','Вещи из быта','Работа','Искусство'].forEach(x=>ch.append(h('span',null,x)));col.append(ch);c.append(col);}},
+ growth:{title:'Рост',lead:'Склад сейчас, маркетинг дальше. Идём шагами.',build(c){
+   c.append(empty(tile('Цель','Уйти со склада в течение года, возможно в маркетинг.'),'Пока без деталей. Расскажем подробнее, когда захочешь.'));
+   c.append(empty(tile('Навыки'),'Пока пусто. Добавим, когда определим направление.'));
+   const t=tile('Разбор недели','Пятница, после работы. Я задам один вопрос про нас с тобой.');btns(t,[['Открыть сейчас',()=>say('Пятница')]]);c.append(t);}},
+ learn:{title:'Обучение',lead:'Двадцать минут в день. Исправляю сразу.',tabs:[['langs','Учу языки'],['other','Другая тема']],build(c,tab){
+   if(tab==='other'){
+     c.append(addList('kaya.topics.v1','Что хочешь изучить','Например: основы маркетинга','Составить план','Записала. Соберу план.'));
+     c.append(empty(tile('Мои темы'),'Темы появятся здесь после первого плана.'));
+   }else{
+     [['Турецкий','С нуля. Начинаем с букв и приветствий.'],['Английский','Для себя. Разговор и живая речь.']].forEach(([n,d])=>{
+       const t=tile(n,d);btns(t,[['Урок на 20 минут',()=>say('Урок: '+n)],['Поговорить',()=>say('Давай поговорим: '+n)]]);c.append(t);});
+     c.append(empty(tile('Мой словарь'),'Слова появятся после первого урока.'));
+   }}}
+};
+let CUR={id:null,tab:null};
+function renderSection(id,tab){
+  const col=$('#secCol');col.textContent='';CUR={id,tab};
+  const head=h('header');const back=h('button','back',id?'← Разделы':'← Назад');back.type='button';back.onclick=id?()=>renderSection(null):closeSec;
+  if(!id){back.textContent='← Назад';}head.append(back);col.append(head);
+  if(!id){
+    col.append(h('h2',null,'Разделы'));
+    [['support','Опора','Техники и фразы, когда страшно'],['stories','Истории','Вещь на вечер и коллекция'],['growth','Рост','Карьера, навыки, разбор недели'],['learn','Обучение','Языки и любая другая тема']].forEach(([k,n,d])=>{
+      const t=tile(n,d,{tag:'button'});t.type='button';t.onclick=()=>renderSection(k,k==='learn'?'langs':null);col.append(t);});
+    return;}
+  const S=SEC[id];col.append(h('h2',null,S.title),h('p','lead',S.lead));
+  if(S.tabs){const tb=h('div','tabs2');S.tabs.forEach(([k,l])=>{const b=h('button',k===tab?'on':'',l);b.type='button';b.onclick=()=>renderSection(id,k);tb.append(b);});col.append(tb);}
+  S.build(col,tab);
+}
+function openSec(){renderSection(null);$('#sec').hidden=false;$('#sec').scrollTop=0;idle.pause();}
+function closeSec(){$('#sec').hidden=true;if($('#chat').hidden)idle.play().catch(()=>{});}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(b){e.preventDefault();openSec();}});
+let tt;function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(tt);tt=setTimeout(()=>e.hidden=true,3200);}
+$('#mic').onclick=function(){this.classList.toggle('rec');toast(this.classList.contains('rec')?'Слушаю. Голос подключим вместе с сервером.':'Остановила.');};
+
+/* sheets */
+const SH={
+ week:['Неделя','Здесь будет твой календарь. Расписание я не придумываю, скажи, что записать.',[]],
+ stats:['Статистика','Что выполнено за неделю, и что я заметила о том, как с тобой лучше работать.',[]],
+ tasks:['Задачи','Список дел на сегодня. Пока пусто.',[]],
+ settings:['Подключения','Календарь: кнопка «В календарь» в плане отдаёт файл, iPhone предложит добавить события. Будильник: один раз создай в приложении «Команды» команду «Кая будильник»: «Получить текст из ввода», затем «Создать будильник» со временем из этого текста. После этого я ставлю будильник по твоей просьбе, ты только нажимаешь кнопку. Прямо ставить будильник без нажатия iPhone веб-страницам не разрешает.',[]],
+ files:['Файлы','Документы и заметки, которые ты мне присылаешь.',[]],
+ train:['Тренировки','Тренировки появятся здесь, когда ты скажешь, что записать.',[]],
+ food:['Питание','Питание появится здесь, когда ты скажешь, что записать.',[]],
+ sections:['Разделы','',[['Опора','Техники и фразы, когда страшно'],['Истории','Вещь на вечер и коллекция'],['Рост','Карьера, навыки, разбор недели'],['Язык','Турецкий и английский, 20 минут']]]
+};
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-sheet]');if(!b)return;
+  const [h,p,l]=SH[b.dataset.sheet];
+  const body=$('#sheetBody');body.textContent='';
+  const H=document.createElement('h2');H.textContent=h;body.append(H);
+  if(p){const P=document.createElement('p');P.textContent=p;body.append(P);}
+  if(l.length){const L=document.createElement('div');L.className='list';
+    l.forEach(x=>{const k=document.createElement('button');k.textContent=x[0];const s=document.createElement('small');s.textContent=x[1];k.append(s);
+      k.onclick=()=>{$('#sheet').hidden=true;idle.pause();toast(x[0]+': раздел соберём следующим.');setTimeout(()=>idle.play().catch(()=>{}),1500);};L.append(k);});body.append(L);}
+  $('#sheet').hidden=false;
+});
+$('#sheet').onclick=e=>{if(e.target.id==='sheet')e.target.hidden=true;};
+</script>
+
+</body>
+</html>
